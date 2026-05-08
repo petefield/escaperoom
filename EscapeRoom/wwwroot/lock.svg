@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" fill="none">
+  <!-- Shackle -->
+  <path d="M25 50 V32 C25 14 75 14 75 32 V50" stroke="#c8a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <!-- Body -->
+  <rect x="10" y="50" width="80" height="60" rx="8" fill="#2a1f10" stroke="#c8a96e" stroke-width="3"/>
+  <!-- Keyhole circle -->
+  <circle cx="50" cy="76" r="10" fill="#c8a96e" opacity="0.9"/>
+  <!-- Keyhole slot -->
+  <rect x="46" y="82" width="8" height="14" rx="3" fill="#c8a96e" opacity="0.9"/>
+  <!-- Rivets -->
+  <circle cx="22" cy="62" r="4" fill="#c8a96e" opacity="0.5"/>
+  <circle cx="78" cy="62" r="4" fill="#c8a96e" opacity="0.5"/>
+  <circle cx="22" cy="100" r="4" fill="#c8a96e" opacity="0.5"/>
+  <circle cx="78" cy="100" r="4" fill="#c8a96e" opacity="0.5"/>
+</svg>

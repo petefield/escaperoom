@@ -1,0 +1,195 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Escape Room</PageTitle>
+
+<div class="room-bg">
+    <div class="overlay"></div>
+
+    <div class="room-content">
+        <div class="title-area">
+            <h1 class="room-title">⚠ CLASSIFIED TERMINAL ⚠</h1>
+            <p class="room-subtitle">Enter the access code to retrieve the classified password</p>
+        </div>
+
+        <div class="panel-wrap">
+            <!-- Left decoration -->
+            <div class="deco-panel left-deco">
+                <img src="lock.svg" class="lock-img @(isUnlocked ? "lock-open" : "")" alt="lock" />
+                <div class="status-lights">
+                    <div class="status-light @(isUnlocked ? "light-green" : isError ? "light-red" : "light-amber")"></div>
+                    <div class="status-label">@(isUnlocked ? "OPEN" : isError ? "DENIED" : "LOCKED")</div>
+                </div>
+                <div class="deco-lines">
+                    @for (int i = 0; i < 8; i++)
+                    {
+                        <div class="deco-line"></div>
+                    }
+                </div>
+            </div>
+
+            <!-- Main keypad -->
+            <div class="keypad-panel">
+                <div class="panel-header">
+                    <div class="header-dot @(isError ? "dot-red" : isUnlocked ? "dot-green" : "dot-amber")"></div>
+                    <span class="header-title">ACCESS CONTROL</span>
+                    <div class="header-dot @(isError ? "dot-red" : isUnlocked ? "dot-green" : "dot-amber")"></div>
+                </div>
+
+                <div class="display-screen @(isError ? "screen-error" : isUnlocked ? "screen-success" : "")">
+                    <div class="screen-label">ENTER CODE</div>
+                    <div class="screen-digits">
+                        @for (int i = 0; i < 4; i++)
+                        {
+                            int idx = i;
+                            <div class="digit-cell @(enteredCode.Length > idx ? "digit-filled" : "")">
+                                @(enteredCode.Length > idx ? "●" : "")
+                            </div>
+                        }
+                    </div>
+                    @if (isError)
+                    {
+                        <div class="screen-msg error-msg">ACCESS DENIED</div>
+                    }
+                    else if (isUnlocked)
+                    {
+                        <div class="screen-msg success-msg">ACCESS GRANTED</div>
+                    }
+                </div>
+
+                @if (!isUnlocked)
+                {
+                    <div class="keypad">
+                        @foreach (var digit in new[] { "1","2","3","4","5","6","7","8","9","","0","⌫" })
+                        {
+                            if (digit == "")
+                            {
+                                <div></div>
+                            }
+                            else
+                            {
+                                <button class="key @(digit == "⌫" ? "key-back" : "")"
+                                        @onclick="() => KeyPress(digit)">
+                                    @digit
+                                </button>
+                            }
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="password-reveal">
+                        <div class="password-box">
+                            <div class="password-label">🔓 CLASSIFIED PASSWORD</div>
+                            <div class="password-value">@revealedPassword</div>
+                        </div>
+                        <button class="btn-reset" @onclick="Reset">⟳ RESET TERMINAL</button>
+                    </div>
+                }
+
+                <div class="panel-footer">
+                    <span>UNIT 7 &bull; SEC-LVL 5 &bull; AUTHORIZED USE ONLY</span>
+                </div>
+            </div>
+
+            <!-- Right decoration -->
+            <div class="deco-panel right-deco">
+                <div class="deco-grid">
+                    @for (int i = 0; i < 16; i++)
+                    {
+                        <div class="grid-dot @(isUnlocked ? "dot-active" : "")"></div>
+                    }
+                </div>
+                <div class="deco-lines">
+                    @for (int i = 0; i < 8; i++)
+                    {
+                        <div class="deco-line"></div>
+                    }
+                </div>
+                <div class="scan-line"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string CorrectCode = "6797";
+    private const string Password = "Frogs Are Fab";
+
+    private string enteredCode = "";
+    private bool isUnlocked = false;
+    private bool isError = false;
+    private bool _jsInitialized = false;
+
+    private string revealedPassword => Password;
+
+    private async Task KeyPress(string key)
+    {
+        if (isError) return;
+
+        if (key == "⌫")
+        {
+            if (enteredCode.Length > 0)
+                enteredCode = enteredCode[..^1];
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (enteredCode.Length >= 4) return;
+
+        enteredCode += key;
+        await InvokeAsync(StateHasChanged);
+
+        if (enteredCode.Length == 4)
+        {
+            await Task.Delay(300);
+            if (enteredCode == CorrectCode)
+            {
+                isUnlocked = true;
+            }
+            else
+            {
+                isError = true;
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(1500);
+                isError = false;
+                enteredCode = "";
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void Reset()
+    {
+        enteredCode = "";
+        isUnlocked = false;
+        isError = false;
+    }
+
+    private DotNetObjectReference<Home>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("escapeRoom.registerKeyboard", _dotNetRef);
+            _jsInitialized = true;
+        }
+    }
+
+    [JSInvokable]
+    public Task OnKeyDown(string key) => InvokeAsync(() => KeyPress(key));
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsInitialized)
+        {
+            await JS.InvokeVoidAsync("escapeRoom.unregisterKeyboard");
+        }
+        _dotNetRef?.Dispose();
+    }
+}
+
